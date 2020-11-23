@@ -30,7 +30,12 @@ could be defined for systemd, supervisor, launchd, or other systems.
 
 import em
 import os
-import io
+import sys
+
+if sys.version_info>(3,0):
+    from io import StringIO
+else: # If Python 2
+    from io import BytesIO as StringIO
 
 from catkin.find_in_workspaces import find_in_workspaces
 
@@ -146,7 +151,7 @@ class Upstart(Generic):
             self.root, "etc/ros", self.job.rosdistro, self.job.name + ".d")
 
     def _fill_template(self, template):
-        self.interpreter.output = io.StringIO()
+        self.interpreter.output = StringIO()
         self.interpreter.reset()
         with open(find_in_workspaces(project="robot_upstart", path=template)[0]) as f:
             self.interpreter.file(f)
@@ -162,7 +167,7 @@ class Systemd(Generic):
     To detect which system you're using run: ps -p1 | grep systemd && echo systemd || echo upstart
     """
 
-    def generate_install(self):
+    def generate_install(self, master_service=''):
         # Default is /etc/ros/DISTRO/JOBNAME.d
         self._set_job_path()
 
@@ -175,8 +180,13 @@ class Systemd(Generic):
             # Share a single instance of the empy interpreter.
             self.interpreter = em.Interpreter(globals=self.job.__dict__.copy())
 
-            self.installation_files[os.path.join(self.root, "lib/systemd/system", self.job.name + ".service")] = {
-                "content": self._fill_template("templates/systemd_job.conf.em"), "mode": 0o644}
+            if not self.interpreter.globals['master_service']:
+                self.installation_files[os.path.join(self.root, "lib/systemd/system", self.job.name + ".service")] = {
+                    "content": self._fill_template("templates/systemd_job_CORE.conf.em"), "mode": 0o644}
+            else:
+                self.installation_files[os.path.join(self.root, "lib/systemd/system", self.job.name + ".service")] = {
+                    "content": self._fill_template("templates/systemd_job_NODE.conf.em"), "mode": 0o644}
+
             self.installation_files[os.path.join(self.root, "etc/systemd/system/multi-user.target.wants",
                                                  self.job.name + ".service")] = {
                 "symlink": os.path.join(self.root, "lib/systemd/system/", self.job.name + ".service")}
@@ -223,7 +233,7 @@ class Systemd(Generic):
             self.root, "etc/ros", self.job.rosdistro, self.job.name + ".d")
 
     def _fill_template(self, template):
-        self.interpreter.output = io.StringIO()
+        self.interpreter.output = StringIO()
         self.interpreter.reset()
         with open(find_in_workspaces(project="robot_upstart", path=template)[0]) as f:
             self.interpreter.file(f)

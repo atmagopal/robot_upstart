@@ -105,6 +105,10 @@ class Job(object):
         # startup job itself. List of strs.
         self.files = []
 
+        # Specify the master service that starts the roscore to ensure the current service 
+        # starts AFTER the master service activation
+        self.master_service = ''
+
     def add(self, package=None, filename=None, glob=None):
         """ Add launch or other configuration files to Job.
 
