@@ -30,7 +30,7 @@
 [Unit]
 Description="bringup @(name)"
 Requires=@(master_service)
-After=network.target @(master_service)
+After=network.target network-online.target @(master_service)
 
 [Service]
 Type=simple
